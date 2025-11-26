@@ -102,7 +102,6 @@
       
       // Category Leaderboard state
       const [leaderboardCategory, setLeaderboardCategory] = useState('');
-      const [leaderboardRace, setLeaderboardRace] = useState('all');
       const [leaderboardSearch, setLeaderboardSearch] = useState('');
       const leaderboardTableRef = useRef(null);
       const highlightedRowRef = useRef(null);
@@ -509,8 +508,16 @@
           d["Race Category"] === leaderboardCategory && d.TotalSeconds
         );
         
-        if (leaderboardRace !== 'all') {
-          data = data.filter(d => d.Race === leaderboardRace);
+        // Apply global race filter
+        if (raceFilter !== 'all') {
+          data = data.filter(d => d.Race === raceFilter);
+        }
+        
+        // Apply team filter (or Nebo Goats filter)
+        if (showOnlyNeboGoats) {
+          data = data.filter(d => NEBO_GOATS_TEAMS.includes(d.Team));
+        } else if (selectedTeams.length > 0) {
+          data = data.filter(d => selectedTeams.includes(d.Team));
         }
         
         // Sort by total time (fastest first)
@@ -518,7 +525,7 @@
           ...entry,
           rank: idx + 1
         }));
-      }, [leaderboardCategory, leaderboardRace, filteredRaceData]);
+      }, [leaderboardCategory, raceFilter, selectedTeams, showOnlyNeboGoats, filteredRaceData]);
       
       // Find searched rider's best time index for highlighting
       const searchedRiderIndex = useMemo(() => {
@@ -526,6 +533,22 @@
         const searchLower = leaderboardSearch.toLowerCase();
         return leaderboardData.findIndex(d => d.Name.toLowerCase().includes(searchLower));
       }, [leaderboardSearch, leaderboardData]);
+      
+      // Helper to check if a rider matches search
+      const matchesSearch = (name) => {
+        if (!leaderboardSearch) return false;
+        return name.toLowerCase().includes(leaderboardSearch.toLowerCase());
+      };
+      
+      // Auto-scroll to first match within table container (not page)
+      useEffect(() => {
+        if (searchedRiderIndex >= 0 && highlightedRowRef.current && leaderboardTableRef.current && leaderboardSearch.length >= 2) {
+          const container = leaderboardTableRef.current;
+          const row = highlightedRowRef.current;
+          const rowTop = row.offsetTop - container.offsetTop;
+          container.scrollTo({ top: rowTop - 50, behavior: 'smooth' });
+        }
+      }, [searchedRiderIndex, leaderboardSearch]);
       
       // Toggle section open/closed
       const toggleSection = (section) => {
@@ -860,7 +883,7 @@
 
               {/* Category Leaderboard Section */}
               <CollapsibleSection id="categoryLeaderboard" title="Category Leaderboard" icon="🏆" isOpen={sectionsOpen.categoryLeaderboard} onToggle={toggleSection}>
-                <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Select Category *</label>
                     <select
@@ -871,19 +894,6 @@
                       <option value="">-- Choose Category --</option>
                       {allCategories.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Race Filter</label>
-                    <select
-                      value={leaderboardRace}
-                      onChange={(e) => setLeaderboardRace(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    >
-                      <option value="all">All Races</option>
-                      {allRaces.map(race => (
-                        <option key={race} value={race}>{race}</option>
                       ))}
                     </select>
                   </div>
@@ -915,15 +925,14 @@
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {leaderboardData.map((entry, idx) => {
-                          const isSearched = leaderboardSearch && 
-                            entry.Name.toLowerCase().includes(leaderboardSearch.toLowerCase()) &&
-                            idx === searchedRiderIndex;
+                          const isSearched = matchesSearch(entry.Name);
+                          const isFirstMatch = isSearched && idx === searchedRiderIndex;
                           const isNebo = NEBO_GOATS_TEAMS.includes(entry.Team);
                           
                           return (
                             <tr 
                               key={idx} 
-                              ref={isSearched ? highlightedRowRef : null}
+                              ref={isFirstMatch ? highlightedRowRef : null}
                               className={`${isSearched ? 'bg-yellow-200 font-bold' : isNebo ? 'bg-orange-50' : 'hover:bg-gray-50'}`}
                             >
                               <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
