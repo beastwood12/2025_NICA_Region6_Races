@@ -65,11 +65,34 @@
       const [regionDropdownOpen, setRegionDropdownOpen] = useState(false);
       const regionDropdownRef = useRef(null);
       
+      // Team dropdown state
+      const [teamDropdownOpen, setTeamDropdownOpen] = useState(false);
+      const teamDropdownRef = useRef(null);
+      
+      // Collapsible sections state
+      const [sectionsOpen, setSectionsOpen] = useState({
+        teamComparison: true,
+        categoryLeaderboard: false,
+        genderBalance: false,
+        programFunnel: false,
+        categoryAnalysis: false
+      });
+      
+      // Category Leaderboard state
+      const [leaderboardCategory, setLeaderboardCategory] = useState('');
+      const [leaderboardRace, setLeaderboardRace] = useState('all');
+      const [leaderboardSearch, setLeaderboardSearch] = useState('');
+      const leaderboardTableRef = useRef(null);
+      const highlightedRowRef = useRef(null);
+      
       // Close region dropdown when clicking outside
       useEffect(() => {
         const handleClickOutside = (event) => {
           if (regionDropdownRef.current && !regionDropdownRef.current.contains(event.target)) {
             setRegionDropdownOpen(false);
+          }
+          if (teamDropdownRef.current && !teamDropdownRef.current.contains(event.target)) {
+            setTeamDropdownOpen(false);
           }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -456,6 +479,65 @@
         return combined.sort((a, b) => parseInt(a.Placement) - parseInt(b.Placement));
       }, [analysisTeam, analysisCategory, analysisRace, filteredRaceData]);
 
+      // Category Leaderboard data - all entries sorted by time
+      const leaderboardData = useMemo(() => {
+        if (!leaderboardCategory) return [];
+        
+        let data = filteredRaceData.filter(d => 
+          d["Race Category"] === leaderboardCategory && d.TotalSeconds
+        );
+        
+        if (leaderboardRace !== 'all') {
+          data = data.filter(d => d.Race === leaderboardRace);
+        }
+        
+        // Sort by total time (fastest first)
+        return data.sort((a, b) => a.TotalSeconds - b.TotalSeconds).map((entry, idx) => ({
+          ...entry,
+          rank: idx + 1
+        }));
+      }, [leaderboardCategory, leaderboardRace, filteredRaceData]);
+      
+      // Find searched rider's best time index for auto-scroll
+      const searchedRiderIndex = useMemo(() => {
+        if (!leaderboardSearch || !leaderboardData.length) return -1;
+        const searchLower = leaderboardSearch.toLowerCase();
+        return leaderboardData.findIndex(d => d.Name.toLowerCase().includes(searchLower));
+      }, [leaderboardSearch, leaderboardData]);
+      
+      // Auto-scroll to searched rider
+      useEffect(() => {
+        if (searchedRiderIndex >= 0 && highlightedRowRef.current) {
+          highlightedRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, [searchedRiderIndex]);
+      
+      // Toggle section open/closed
+      const toggleSection = (section) => {
+        setSectionsOpen(prev => ({ ...prev, [section]: !prev[section] }));
+      };
+      
+      // Collapsible Section component
+      const CollapsibleSection = ({ id, title, icon, children }) => (
+        <div className="bg-white rounded-lg shadow mb-4 overflow-hidden">
+          <button
+            onClick={() => toggleSection(id)}
+            className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition"
+          >
+            <span className="font-bold text-gray-800">{icon} {title}</span>
+            <svg 
+              className={`w-5 h-5 text-gray-500 transition-transform ${sectionsOpen[id] ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {sectionsOpen[id] && <div className="p-4">{children}</div>}
+        </div>
+      );
+
       const handleSort = (column) => {
         if (sortColumn === column) {
           setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -599,36 +681,68 @@
               {/* Filters - Single Row Layout */}
               <div className="bg-white rounded-lg shadow p-3 mb-4">
                 <div className="grid grid-cols-3 gap-4 items-start">
-                  {/* Team Multi-Select */}
+                  {/* Team Dropdown Checkbox */}
                   <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="text-sm font-medium text-gray-700">
-                        Select Teams {selectedTeams.length > 0 && `(${selectedTeams.length})`}
-                      </label>
-                      {selectedTeams.length > 0 && (
-                        <button
-                          onClick={() => setSelectedTeams([])}
-                          className="text-xs text-orange-600 hover:text-orange-700 font-medium"
-                        >
-                          Reset
-                        </button>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Select Teams {selectedTeams.length > 0 && `(${selectedTeams.length})`}
+                    </label>
+                    <div className="relative" ref={teamDropdownRef}>
+                      <button
+                        onClick={() => !showOnlyNeboGoats && setTeamDropdownOpen(!teamDropdownOpen)}
+                        disabled={showOnlyNeboGoats}
+                        className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-left flex items-center justify-between ${
+                          showOnlyNeboGoats ? 'bg-gray-100 text-gray-400' : 'bg-white hover:border-gray-400'
+                        }`}
+                      >
+                        <span className="truncate">
+                          {selectedTeams.length === 0 
+                            ? 'All Teams' 
+                            : selectedTeams.length <= 2 
+                              ? selectedTeams.join(', ')
+                              : `${selectedTeams.length} teams selected`}
+                        </span>
+                        <svg className={`w-4 h-4 text-gray-400 transition-transform ${teamDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      
+                      {teamDropdownOpen && (
+                        <div className="absolute z-30 mt-1 w-full bg-white rounded-lg shadow-lg border border-gray-200 py-2 max-h-64 overflow-y-auto">
+                          {allTeams.map(team => (
+                            <label 
+                              key={team}
+                              className="flex items-center px-3 py-2 hover:bg-orange-50 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedTeams.includes(team)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedTeams([...selectedTeams, team]);
+                                  } else {
+                                    setSelectedTeams(selectedTeams.filter(t => t !== team));
+                                  }
+                                }}
+                                className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
+                              />
+                              <span className="ml-2 text-gray-700 text-sm">
+                                {team} {NEBO_GOATS_TEAMS.includes(team) ? '🐐' : ''}
+                              </span>
+                            </label>
+                          ))}
+                          {selectedTeams.length > 0 && (
+                            <div className="border-t border-gray-200 mt-2 pt-2 px-3">
+                              <button
+                                onClick={() => setSelectedTeams([])}
+                                className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                              >
+                                Reset Selection
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
-                    <select
-                      multiple
-                      value={selectedTeams}
-                      onChange={handleTeamSelect}
-                      disabled={showOnlyNeboGoats}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100 disabled:text-gray-400"
-                      style={{ height: '80px' }}
-                    >
-                      {allTeams.map(team => (
-                        <option key={team} value={team} className="py-1">
-                          {team} {NEBO_GOATS_TEAMS.includes(team) ? '🐐' : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd for multiple</p>
                   </div>
 
                   {/* Race Filter */}
@@ -672,8 +786,8 @@
                 </div>
               </div>
 
-              {/* Metrics Table */}
-              <div className="bg-white rounded-lg shadow overflow-hidden mb-4">
+              {/* Team Comparison Section */}
+              <CollapsibleSection id="teamComparison" title="Team Comparison" icon="📊">
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200 text-sm">
                     <thead className="bg-gray-50">
@@ -742,11 +856,108 @@
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </CollapsibleSection>
 
-              {/* Gender Balance Chart */}
-              <div className="bg-white rounded-lg shadow p-4 mb-4">
-                <h3 className="text-sm font-bold text-gray-800 mb-3">👥 Gender Balance</h3>
+              {/* Category Leaderboard Section */}
+              <CollapsibleSection id="categoryLeaderboard" title="Category Leaderboard" icon="🏆">
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Category *</label>
+                    <select
+                      value={leaderboardCategory}
+                      onChange={(e) => setLeaderboardCategory(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    >
+                      <option value="">-- Choose Category --</option>
+                      {allCategories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Race Filter</label>
+                    <select
+                      value={leaderboardRace}
+                      onChange={(e) => setLeaderboardRace(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    >
+                      <option value="all">All Races</option>
+                      {allRaces.map(race => (
+                        <option key={race} value={race}>{race}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Find Rider</label>
+                    <input
+                      type="text"
+                      value={leaderboardSearch}
+                      onChange={(e) => setLeaderboardSearch(e.target.value)}
+                      placeholder="Type rider name..."
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    />
+                  </div>
+                </div>
+                
+                {leaderboardCategory && leaderboardData.length > 0 && (
+                  <div className="overflow-x-auto max-h-96 overflow-y-auto" ref={leaderboardTableRef}>
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-orange-500 text-white sticky top-0">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-semibold">Rank</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold">Name</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold">Team</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold">Region</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold">Race</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold">Race Place</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold">Total Time</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {leaderboardData.map((entry, idx) => {
+                          const isSearched = leaderboardSearch && 
+                            entry.Name.toLowerCase().includes(leaderboardSearch.toLowerCase()) &&
+                            idx === searchedRiderIndex;
+                          const isNebo = NEBO_GOATS_TEAMS.includes(entry.Team);
+                          
+                          return (
+                            <tr 
+                              key={idx} 
+                              ref={isSearched ? highlightedRowRef : null}
+                              className={`${isSearched ? 'bg-yellow-200 font-bold' : isNebo ? 'bg-orange-50' : 'hover:bg-gray-50'}`}
+                            >
+                              <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                                {entry.rank <= 3 ? ['🥇','🥈','🥉'][entry.rank-1] : ''} #{entry.rank}
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm">{entry.Name}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm">{entry.Team} {isNebo && '🐐'}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm">{entry.Region}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm">{entry.Race}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm">#{entry.Placement}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm font-semibold">{entry["Total Time"]}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                
+                {leaderboardCategory && leaderboardData.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No data found for this category.
+                  </div>
+                )}
+                
+                {!leaderboardCategory && (
+                  <div className="text-center py-8 text-gray-500">
+                    Please select a category to view the leaderboard.
+                  </div>
+                )}
+              </CollapsibleSection>
+
+              {/* Gender Balance Section */}
+              <CollapsibleSection id="genderBalance" title="Gender Balance" icon="👥">
                 <div className="space-y-2">
                   {sortedTeamMetrics.map((team, idx) => {
                     const isNebo = NEBO_GOATS_TEAMS.includes(team.teamName);
@@ -781,11 +992,10 @@
                     );
                   })}
                 </div>
-              </div>
+              </CollapsibleSection>
 
-              {/* Program Funnel */}
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-sm font-bold text-gray-800 mb-3">🎯 Program Development Funnel</h3>
+              {/* Program Funnel Section */}
+              <CollapsibleSection id="programFunnel" title="Program Development Funnel" icon="🎯">
                 <div className="space-y-2">
                   {sortedTeamMetrics.map((team, idx) => {
                     const isNebo = NEBO_GOATS_TEAMS.includes(team.teamName);
@@ -859,12 +1069,10 @@
                 <div className="mt-2 text-xs text-gray-500 italic">
                   Note: Riders who competed in multiple categories are counted only in their highest category.
                 </div>
-              </div>
+              </CollapsibleSection>
 
-              {/* Team Category Analysis */}
-              <div className="bg-white rounded-lg shadow p-4 mt-4">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">🔍 Team Category Analysis (Choose A Team)</h3>
-                
+              {/* Team Category Analysis Section */}
+              <CollapsibleSection id="categoryAnalysis" title="Team Category Analysis" icon="🔍">
                 {/* Dropdowns */}
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   <div>
@@ -966,7 +1174,7 @@
                     Please select both a team and a category to view the analysis.
                   </div>
                 )}
-              </div>
+              </CollapsibleSection>
             </div>
           )}
 
