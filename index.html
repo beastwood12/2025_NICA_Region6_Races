@@ -498,19 +498,12 @@
         }));
       }, [leaderboardCategory, leaderboardRace, filteredRaceData]);
       
-      // Find searched rider's best time index for auto-scroll
+      // Find searched rider's best time index for highlighting
       const searchedRiderIndex = useMemo(() => {
         if (!leaderboardSearch || !leaderboardData.length) return -1;
         const searchLower = leaderboardSearch.toLowerCase();
         return leaderboardData.findIndex(d => d.Name.toLowerCase().includes(searchLower));
       }, [leaderboardSearch, leaderboardData]);
-      
-      // Auto-scroll to searched rider (only when we have a valid match)
-      useEffect(() => {
-        if (searchedRiderIndex >= 0 && highlightedRowRef.current && leaderboardSearch.length >= 2) {
-          highlightedRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, [searchedRiderIndex, leaderboardSearch]);
       
       // Toggle section open/closed
       const toggleSection = (section) => {
@@ -522,7 +515,7 @@
         <div className="bg-white rounded-lg shadow mb-4 overflow-hidden">
           <button
             type="button"
-            onClick={() => toggleSection(id)}
+            onClick={(e) => { e.preventDefault(); toggleSection(id); }}
             className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition"
           >
             <span className="font-bold text-gray-800">{icon} {title}</span>
@@ -595,7 +588,7 @@
                   <div className="relative mt-1" ref={regionDropdownRef}>
                     <button
                       type="button"
-                      onClick={() => setRegionDropdownOpen(!regionDropdownOpen)}
+                      onClick={(e) => { e.preventDefault(); setRegionDropdownOpen(!regionDropdownOpen); }}
                       className="flex items-center gap-2 text-sm text-white bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition"
                     >
                       <span>
@@ -634,7 +627,8 @@
                         ))}
                         <div className="border-t border-gray-200 mt-2 pt-2 px-4">
                           <button
-                            onClick={() => setSelectedRegions([5])}
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); setSelectedRegions([5]); }}
                             className="text-xs text-orange-600 hover:text-orange-700 font-medium"
                           >
                             Reset to Region 5
@@ -654,7 +648,8 @@
             <div className="max-w-7xl mx-auto px-4 py-4">
               <div className="flex justify-center gap-4">
                 <button
-                  onClick={() => setActivePage('teams')}
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setActivePage('teams'); }}
                   className={`px-8 py-3 rounded-lg text-base font-semibold transition ${
                     activePage === 'teams' 
                       ? 'bg-orange-500 text-white shadow-md' 
@@ -664,7 +659,8 @@
                   Teams
                 </button>
                 <button
-                  onClick={() => setActivePage('individuals')}
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setActivePage('individuals'); }}
                   className={`px-8 py-3 rounded-lg text-base font-semibold transition ${
                     activePage === 'individuals' 
                       ? 'bg-orange-500 text-white shadow-md' 
@@ -691,7 +687,7 @@
                     <div className="relative" ref={teamDropdownRef}>
                       <button
                         type="button"
-                        onClick={() => !showOnlyNeboGoats && setTeamDropdownOpen(!teamDropdownOpen)}
+                        onClick={(e) => { e.preventDefault(); if (!showOnlyNeboGoats) setTeamDropdownOpen(!teamDropdownOpen); }}
                         disabled={showOnlyNeboGoats}
                         className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-left flex items-center justify-between ${
                           showOnlyNeboGoats ? 'bg-gray-100 text-gray-400' : 'bg-white hover:border-gray-400'
@@ -736,7 +732,7 @@
                           <div className="border-t border-gray-200 mt-2 pt-2 px-3">
                             <button
                               type="button"
-                              onClick={() => setSelectedTeams([])}
+                              onClick={(e) => { e.preventDefault(); setSelectedTeams([]); }}
                               className="text-xs text-orange-600 hover:text-orange-700 font-medium"
                             >
                               Reset (Show All)
@@ -766,7 +762,9 @@
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Show Nebo Goats Only</label>
                     <button
-                      onClick={() => {
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
                         setShowOnlyNeboGoats(!showOnlyNeboGoats);
                         if (!showOnlyNeboGoats) setSelectedTeams([]);
                       }}
@@ -1214,8 +1212,10 @@
                     <div className="absolute z-20 w-full mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                       {filteredRiders.map(rider => (
                         <button
+                          type="button"
                           key={rider.name}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.preventDefault();
                             setSelectedRider(rider.name);
                             setSearchTerm('');
                             setShowDropdown(false);
