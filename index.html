@@ -505,12 +505,12 @@
         return leaderboardData.findIndex(d => d.Name.toLowerCase().includes(searchLower));
       }, [leaderboardSearch, leaderboardData]);
       
-      // Auto-scroll to searched rider
+      // Auto-scroll to searched rider (only when we have a valid match)
       useEffect(() => {
-        if (searchedRiderIndex >= 0 && highlightedRowRef.current) {
+        if (searchedRiderIndex >= 0 && highlightedRowRef.current && leaderboardSearch.length >= 2) {
           highlightedRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, [searchedRiderIndex]);
+      }, [searchedRiderIndex, leaderboardSearch]);
       
       // Toggle section open/closed
       const toggleSection = (section) => {
@@ -521,6 +521,7 @@
       const CollapsibleSection = ({ id, title, icon, children }) => (
         <div className="bg-white rounded-lg shadow mb-4 overflow-hidden">
           <button
+            type="button"
             onClick={() => toggleSection(id)}
             className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition"
           >
@@ -593,6 +594,7 @@
                   {/* Region Dropdown */}
                   <div className="relative mt-1" ref={regionDropdownRef}>
                     <button
+                      type="button"
                       onClick={() => setRegionDropdownOpen(!regionDropdownOpen)}
                       className="flex items-center gap-2 text-sm text-white bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition"
                     >
@@ -688,6 +690,7 @@
                     </label>
                     <div className="relative" ref={teamDropdownRef}>
                       <button
+                        type="button"
                         onClick={() => !showOnlyNeboGoats && setTeamDropdownOpen(!teamDropdownOpen)}
                         disabled={showOnlyNeboGoats}
                         className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-left flex items-center justify-between ${
@@ -730,16 +733,15 @@
                               </span>
                             </label>
                           ))}
-                          {selectedTeams.length > 0 && (
-                            <div className="border-t border-gray-200 mt-2 pt-2 px-3">
-                              <button
-                                onClick={() => setSelectedTeams([])}
-                                className="text-xs text-orange-600 hover:text-orange-700 font-medium"
-                              >
-                                Reset Selection
-                              </button>
-                            </div>
-                          )}
+                          <div className="border-t border-gray-200 mt-2 pt-2 px-3">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTeams([])}
+                              className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                            >
+                              Reset (Show All)
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
