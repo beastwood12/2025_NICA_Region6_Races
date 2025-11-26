@@ -35,6 +35,28 @@
       return category.includes('Girls') ? 'Female' : 'Male';
     };
 
+    // Collapsible Section component - defined outside App to prevent re-creation on render
+    const CollapsibleSection = ({ id, title, icon, isOpen, onToggle, children }) => (
+      <div className="bg-white rounded-lg shadow mb-4 overflow-hidden">
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(id); }}
+          className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition"
+        >
+          <span className="font-bold text-gray-800">{icon} {title}</span>
+          <svg 
+            className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {isOpen && <div className="p-4">{children}</div>}
+      </div>
+    );
+
     function App() {
       const [raceData, setRaceData] = useState([]);
       const [loading, setLoading] = useState(true);
@@ -509,28 +531,6 @@
       const toggleSection = (section) => {
         setSectionsOpen(prev => ({ ...prev, [section]: !prev[section] }));
       };
-      
-      // Collapsible Section component
-      const CollapsibleSection = ({ id, title, icon, children }) => (
-        <div className="bg-white rounded-lg shadow mb-4 overflow-hidden">
-          <button
-            type="button"
-            onClick={(e) => { e.preventDefault(); toggleSection(id); }}
-            className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition"
-          >
-            <span className="font-bold text-gray-800">{icon} {title}</span>
-            <svg 
-              className={`w-5 h-5 text-gray-500 transition-transform ${sectionsOpen[id] ? 'rotate-180' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {sectionsOpen[id] && <div className="p-4">{children}</div>}
-        </div>
-      );
 
       const handleSort = (column) => {
         if (sortColumn === column) {
@@ -787,7 +787,7 @@
               </div>
 
               {/* Team Comparison Section */}
-              <CollapsibleSection id="teamComparison" title="Team Comparison" icon="📊">
+              <CollapsibleSection id="teamComparison" title="Team Comparison" icon="📊" isOpen={sectionsOpen.teamComparison} onToggle={toggleSection}>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200 text-sm">
                     <thead className="bg-gray-50">
@@ -859,7 +859,7 @@
               </CollapsibleSection>
 
               {/* Category Leaderboard Section */}
-              <CollapsibleSection id="categoryLeaderboard" title="Category Leaderboard" icon="🏆">
+              <CollapsibleSection id="categoryLeaderboard" title="Category Leaderboard" icon="🏆" isOpen={sectionsOpen.categoryLeaderboard} onToggle={toggleSection}>
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Select Category *</label>
@@ -957,7 +957,7 @@
               </CollapsibleSection>
 
               {/* Gender Balance Section */}
-              <CollapsibleSection id="genderBalance" title="Gender Balance" icon="👥">
+              <CollapsibleSection id="genderBalance" title="Gender Balance" icon="👥" isOpen={sectionsOpen.genderBalance} onToggle={toggleSection}>
                 <div className="space-y-2">
                   {sortedTeamMetrics.map((team, idx) => {
                     const isNebo = NEBO_GOATS_TEAMS.includes(team.teamName);
@@ -995,7 +995,7 @@
               </CollapsibleSection>
 
               {/* Program Funnel Section */}
-              <CollapsibleSection id="programFunnel" title="Program Development Funnel" icon="🎯">
+              <CollapsibleSection id="programFunnel" title="Program Development Funnel" icon="🎯" isOpen={sectionsOpen.programFunnel} onToggle={toggleSection}>
                 <div className="space-y-2">
                   {sortedTeamMetrics.map((team, idx) => {
                     const isNebo = NEBO_GOATS_TEAMS.includes(team.teamName);
@@ -1072,7 +1072,7 @@
               </CollapsibleSection>
 
               {/* Team Category Analysis Section */}
-              <CollapsibleSection id="categoryAnalysis" title="Team Category Analysis" icon="🔍">
+              <CollapsibleSection id="categoryAnalysis" title="Team Category Analysis" icon="🔍" isOpen={sectionsOpen.categoryAnalysis} onToggle={toggleSection}>
                 {/* Dropdowns */}
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   <div>
