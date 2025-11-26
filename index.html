@@ -545,8 +545,10 @@
         if (searchedRiderIndex >= 0 && highlightedRowRef.current && leaderboardTableRef.current && leaderboardSearch.length >= 2) {
           const container = leaderboardTableRef.current;
           const row = highlightedRowRef.current;
-          const rowTop = row.offsetTop - container.offsetTop;
-          container.scrollTo({ top: rowTop - 50, behavior: 'smooth' });
+          const rowRect = row.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          const scrollTop = container.scrollTop + (rowRect.top - containerRect.top) - 50;
+          container.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
         }
       }, [searchedRiderIndex, leaderboardSearch]);
       
