@@ -13,7 +13,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useMemo, useEffect } = React;
+    const { useState, useMemo, useEffect, useRef } = React;
 
     const NEBO_GOATS_TEAMS = ['Maple Mountain', 'Salem Hills', 'Payson', 'Spanish Fork', 'Springville'];
 
@@ -63,6 +63,18 @@
       // Region filter state
       const [selectedRegions, setSelectedRegions] = useState([5]);
       const [regionDropdownOpen, setRegionDropdownOpen] = useState(false);
+      const regionDropdownRef = useRef(null);
+      
+      // Close region dropdown when clicking outside
+      useEffect(() => {
+        const handleClickOutside = (event) => {
+          if (regionDropdownRef.current && !regionDropdownRef.current.contains(event.target)) {
+            setRegionDropdownOpen(false);
+          }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+      }, []);
 
       // Load race data
       useEffect(() => {
@@ -497,10 +509,10 @@
                   <h1 className="text-2xl font-bold">{dataYear} Utah HS MTB Analytics</h1>
                   
                   {/* Region Dropdown */}
-                  <div className="relative mt-1">
+                  <div className="relative mt-1" ref={regionDropdownRef}>
                     <button
                       onClick={() => setRegionDropdownOpen(!regionDropdownOpen)}
-                      className="flex items-center gap-2 text-sm text-orange-100 hover:text-white transition"
+                      className="flex items-center gap-2 text-sm text-white bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition"
                     >
                       <span>
                         {selectedRegions.length === 0 
