@@ -129,9 +129,12 @@
           })
           .then(data => {
             setRaceData(data);
-            // Set first rider as default
+            // Set first rider from default region (5) as default
             if (data.length > 0) {
-              const firstRider = [...new Set(data.map(d => d.Name))].sort()[0];
+              const region5Data = data.filter(d => d.Region === 5);
+              const firstRider = region5Data.length > 0
+                ? [...new Set(region5Data.map(d => d.Name))].sort()[0]
+                : [...new Set(data.map(d => d.Name))].sort()[0];
               setSelectedRider(firstRider);
             }
             setLoading(false);
